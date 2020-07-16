@@ -88,20 +88,18 @@ module RedisCopy
 
     def redis_from(connection_string)
       require 'uri'
-      connection_string = "redis://#{connection_string}" unless connection_string.start_with?("redis://")
+
+      unless connection_string.start_with?("redis://") || connection_string.start_with?("rediss://")
+        connection_string = "redis://#{connection_string}"
+      end
+
       uri = URI(connection_string)
-      ret = {uri: uri}
 
       # Require the URL to have at least a host
       raise ArgumentError, "invalid url: #{connection_string}" unless uri.host
 
-      host = uri.host
-      port = uri.port if uri.port
-      db = uri.path ? uri.path[1..-1].to_i : 0
-      password = uri.password
-
       # Connect & Ping to ensure access.
-      Redis.new(host: host, port: port, db: db, password: password).tap(&:ping)
+      Redis.new(:url => connection_string).tap(&:ping)
     rescue Redis::CommandError => e
       fail(Redis::CommandError,
            "There was a problem connecting to #{uri.to_s}\n#{e.message}")
